@@ -9,21 +9,6 @@
 #################################################
 
 
-#Construir uma aplicação web utilizando o streamlit para análise de dados de um dataset qualquer em formato csv. A aplicação deve atender todos os requisitos listados na especificação.
-
-#Em seguida, criar um repositório público no GitHub e publicar o código python da aplicação, enviando o link do repositório para o Formulário (https://docs.google.com/forms/d/e/1FAIpQLSeahbxqxAmgtt2p_gB9V64XbPnScFoCIYzt3dGFj6uZ5MoW4Q/viewform).
-
-#1 - Receber um arquivo csv via upload.
-#2 - Exibir as informações básicas da base de dados
-#	2.1 - Tamanho do dados
-#	2.2 - Dados nulos (soma, percentual e gráfico) 
-#	2.3 - Uma amostra dos dados
-#	2.4 - Outras informações que julgar inportantes para a análise de um terceiro
-#3 - Opção para usuário exibir um gráfico para contagem de dados categóricos, lembrando de disponibilizar a(s) coluna(s) para escolha da exibição do usuário.
-#4 - Opção para usuário exibir um gráfico que analisa a relação entre duas variáveis, lembrando de disponibilizar a(s) coluna(s) para escolha da exibição do usuário.
-#5 - Opção para usuário exibir um gráfico que analisa a correlação entre as variáveis.
-#6 - Opção para usuário exibir um gráfico que analisa o percentual da contagem de dados categóricos em relação ao todo, lembrando de disponibilizar a(s) coluna(s) para escolha da exibição do usuário.
-
 # Importar bibliotecas
 import pandas as pd
 import seaborn as sns
@@ -35,29 +20,57 @@ import statistics as sts
 # Função principal:
 
 def app():
-    st.title('Projeto Final - Tecnicas de programação II - Python')
+    col1, col2 = st.columns((2,1))
+    with col1:
+        st.title('Projeto Final - Tecnicas de programação II - Python')
+        
+    with col2:
+        st.image('Python.jpg')
+    
     # Sub - Título da aplicação
-    st.subheader('Análise de Dados com streamlit')
+    st.markdown("<h1 style='text-align: center;'>Análise de Dados com streamlit</h1>", unsafe_allow_html=True)
     arquivo = st.file_uploader("Escolha um arquivo")
     # Exibir informações básicas:
     if arquivo is not None:
         df = pd.read_csv(arquivo)
         shape = df.shape
-        st.write(f'o Tamanho do arquivo é: {shape[0]} linhas e {shape[1]} colunas')
-        analise = st.radio("Qual visualização você quer?", ('info', 'head', 'Describe'))
+        html_subtile = """
+        <div style="background-color:tomato;"><p> Quantidade de linhas no arquivo:</p></div>   
+        """
+        st.markdown(html_subtile, unsafe_allow_html=True)
+        st.write(shape[0])
+        html_subtile1 = """
+        <div style="background-color:tomato;"><p> Quantidade de Colunas no arquivo:</p></div>       
+        """
+        st.markdown(html_subtile1, unsafe_allow_html=True)
+        st.write(shape[1])
+
+        analise = st.radio("Escolha uma visão: ", ('info', 'head', 'Describe'))
         if analise == 'info':
             st.dataframe({'columns': list(df.dtypes.index), 'Dtype': list(map(str, df.dtypes.values)), 'Valores não nulos': list(df.count().values)})
         if analise == 'head':
-            st.write(df.head())
+            all_columns = df.columns.tolist()
+            container = st.container()
+                       
+            if st.checkbox('Selecionar tudo'):
+                selected_options = container.multiselect("Selecione as colunas que quer ver:",all_columns,all_columns)
+            else:
+                selected_options =  container.multiselect("Selecione as Colunas que quer ver:", all_columns)
+    
+            new_df = df[selected_options]
+            st.dataframe(new_df)
+            
         if analise == 'Describe':
             st.write(df.describe())
+
         if st.checkbox('Valores Nulos'):
             nulos =  df.isna().sum()[df.isna().sum()>0]
             nulos_per = df.isna().sum()[df.isna().sum()>0]/len(df)*100
             df_null = st.dataframe({'Contagem de nulos': nulos, 'Percentual de nulos': round(nulos_per,2)})
-            fig, ax = plt.subplots()
-            ax.bar(x=nulos.index, height = nulos.values)
-            st.pyplot(fig)
+            fig = px.bar(nulos, x = nulos.index, y=nulos.values)
+            fig.update_xaxes(title_text='Colunas')
+            fig.update_yaxes(title_text='Contagem')
+            st.plotly_chart(fig)
             
         if st.checkbox('Verificar medidas de tendencia central'):
             coluna = st.selectbox('Selecione uma coluna', list(df.select_dtypes(include='number').columns))
@@ -67,9 +80,10 @@ def app():
             st.dataframe({'valor':{'Média': round(media,2), 'mediana': mediana, 'moda': moda}})
         if st.checkbox('Contagem dos dados categóricos'):
             coluna = st.selectbox('Selecione uma coluna',list(df.select_dtypes(include='object').columns))
-            fig, ax = plt.subplots()
-            ax.bar(x = df[coluna].value_counts().index, height = df[coluna].value_counts().values)
-            st.pyplot(fig)
+            fig = px.bar(df, x = df[coluna].value_counts().index, y = df[coluna].value_counts().values)
+            fig.update_xaxes(title_text='Colunas')
+            fig.update_yaxes(title_text='Contagem')
+            st.plotly_chart(fig)
         if st.checkbox('Verificar relação entre duas variáveis:'):
             st.markdown('1ª Coluna - Eixo x')
             coluna1 = st.selectbox('Selecione a primeira coluna', list(df.select_dtypes(include='number').columns))
